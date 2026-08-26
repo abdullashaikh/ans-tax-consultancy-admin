@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { Search, ArrowUpRight, RefreshCw, FileText, AlertCircle } from 'lucide-react';
 import { StatusBadge } from '../../components/shared/StatusBadge';
 import { applicationsApi, ApplicationFilters } from '../../api/applications.api';
 import { Application, PaginationMeta } from '../../types';
@@ -54,7 +54,7 @@ export const ApplicationsList: React.FC = () => {
 
         <button
           onClick={loadApplications}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-sm transition-colors cursor-pointer"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           <span>Refresh</span>
@@ -78,7 +78,7 @@ export const ApplicationsList: React.FC = () => {
           <select
             value={filters.status}
             onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value, page: 1 }))}
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
           >
             <option value="">All Statuses</option>
             <option value="DRAFT">Draft</option>
@@ -95,7 +95,7 @@ export const ApplicationsList: React.FC = () => {
           <select
             value={filters.priority}
             onChange={(e) => setFilters((prev) => ({ ...prev, priority: e.target.value, page: 1 }))}
-            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
           >
             <option value="">All Priorities</option>
             <option value="LOW">Low</option>
@@ -126,61 +126,87 @@ export const ApplicationsList: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-600" />
                     Loading applications...
                   </td>
                 </tr>
               ) : applications.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <AlertCircle className="w-6 h-6 mx-auto mb-2 text-slate-300" />
                     No applications matched the filter criteria.
                   </td>
                 </tr>
               ) : (
-                applications.map((app) => (
-                  <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                      {app.applicationNumber}
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-900">
-                      <div>{app.clientName || 'Client'}</div>
-                      <div className="text-[10px] text-slate-400">{app.clientEmail}</div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-700 max-w-[180px] truncate">
-                      {app.serviceName || app.title}
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold">
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                          app.priority === 'URGENT'
-                            ? 'bg-rose-100 text-rose-700'
-                            : app.priority === 'HIGH'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {app.priority}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <StatusBadge status={app.status} />
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">
-                      {app.assignedConsultantName || <span className="text-slate-400 italic">Unassigned</span>}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-500">
-                      {new Date(app.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Link
-                        to={`/applications/${app.publicId}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 font-bold transition-colors"
-                      >
-                        <span>Open</span>
-                        <ArrowUpRight className="w-3 h-3" />
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                applications.map((app) => {
+                  const appPubId = app.publicId || (app as any).public_id || String(app.id);
+                  const appNum = app.applicationNumber || (app as any).application_number || `ANS-${app.id}`;
+                  const clientName = app.clientName || (app as any).client_name || 'Client';
+                  const serviceName = app.serviceName || (app as any).service_name || app.title || 'Tax Service';
+                  const consultantName =
+                    app.assignedConsultantName || (app as any).consultant_name || null;
+                  const dateStr = app.createdAt || (app as any).created_at;
+
+                  return (
+                    <tr key={app.id || appPubId} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                        <Link
+                          to={`/applications/${appPubId}`}
+                          className="hover:text-amber-600 flex items-center gap-1.5 transition-colors"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>{appNum}</span>
+                        </Link>
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-900">
+                        <div>{clientName}</div>
+                        {app.clientEmail && (
+                          <div className="text-[10px] text-slate-400">{app.clientEmail}</div>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-700 max-w-[180px] truncate">
+                        {serviceName}
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold">
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                            app.priority === 'URGENT'
+                              ? 'bg-rose-100 text-rose-700'
+                              : app.priority === 'HIGH'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {app.priority}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <StatusBadge status={app.status} />
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600 font-medium">
+                        {consultantName || <span className="text-slate-400 italic">Unassigned</span>}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">
+                        {dateStr
+                          ? new Date(dateStr).toLocaleDateString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                            })
+                          : '—'}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <Link
+                          to={`/applications/${appPubId}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 font-bold transition-colors cursor-pointer"
+                        >
+                          <span>Open</span>
+                          <ArrowUpRight className="w-3 h-3" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -197,14 +223,14 @@ export const ApplicationsList: React.FC = () => {
               <button
                 disabled={!meta.hasPrevPage}
                 onClick={() => setFilters((p) => ({ ...p, page: (p.page || 1) - 1 }))}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold disabled:opacity-40 hover:bg-slate-50"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
               >
                 Previous
               </button>
               <button
                 disabled={!meta.hasNextPage}
                 onClick={() => setFilters((p) => ({ ...p, page: (p.page || 1) + 1 }))}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold disabled:opacity-40 hover:bg-slate-50"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold disabled:opacity-40 hover:bg-slate-50 cursor-pointer"
               >
                 Next
               </button>

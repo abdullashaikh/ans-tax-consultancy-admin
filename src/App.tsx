@@ -7,6 +7,7 @@ import { AdminLayout } from './components/layout/AdminLayout';
 
 // Pages
 import { Login } from './pages/Login';
+import { ForgotPassword } from './pages/ForgotPassword';
 import { Dashboard } from './pages/Dashboard';
 import { ApplicationsList } from './pages/applications/ApplicationsList';
 import { ApplicationDetail } from './pages/applications/ApplicationDetail';
@@ -27,8 +28,9 @@ export const App: React.FC = () => {
       <ToastProvider>
         <AuthProvider>
           <Routes>
-            {/* Public Login Route */}
+            {/* Public Auth Routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
             {/* Authenticated Admin Portal Routes */}
             <Route

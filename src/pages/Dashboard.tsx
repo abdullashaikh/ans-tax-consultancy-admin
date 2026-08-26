@@ -7,6 +7,7 @@ import {
   CreditCard,
   ArrowUpRight,
   CheckCircle2,
+  UserCog,
 } from 'lucide-react';
 import { StatCard } from '../components/shared/StatCard';
 import { StatusBadge } from '../components/shared/StatusBadge';
@@ -19,7 +20,7 @@ import { paymentsApi } from '../api/payments.api';
 import { Application, Lead } from '../types';
 
 export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [counts, setCounts] = useState<{
@@ -40,8 +41,8 @@ export const Dashboard: React.FC = () => {
       try {
         setLoading(true);
         const [appRes, leadRes, clientRes, docRes, payRes] = await Promise.all([
-          applicationsApi.list({ limit: 6 }),
-          leadsApi.list({ limit: 5 }),
+          applicationsApi.list({ limit: 6 }).catch(() => ({ success: true, data: [] })),
+          leadsApi.list({ limit: 5 }).catch(() => ({ success: true, data: [] })),
           clientsApi.list({ limit: 1 }).catch(() => ({ success: true, meta: { total: 0 } })),
           documentsApi.list({ status: 'UPLOADED', limit: 1 }).catch(() => ({ success: true, meta: { total: 0 } })),
           paymentsApi.list({ limit: 100 }).catch(() => ({ success: true, data: [] })),
@@ -56,9 +57,9 @@ export const Dashboard: React.FC = () => {
         );
 
         setCounts({
-          applications: appRes.meta?.total || (appRes.data || []).length,
-          clients: clientRes.meta?.total || 0,
-          pendingDocs: docRes.meta?.total || 0,
+          applications: (appRes as any).meta?.total || (appRes.data || []).length,
+          clients: (clientRes as any).meta?.total || 0,
+          pendingDocs: (docRes as any).meta?.total || 0,
           revenue: totalRevenue,
         });
       } catch (err) {
@@ -90,22 +91,31 @@ export const Dashboard: React.FC = () => {
         <div className="mt-6 flex flex-wrap gap-3 relative z-10">
           <Link
             to="/applications"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-colors cursor-pointer"
           >
             <FileText className="w-4 h-4" />
             <span>Manage Applications</span>
           </Link>
           <Link
             to="/documents"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs backdrop-blur-sm border border-white/10 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs backdrop-blur-sm border border-white/10 transition-colors cursor-pointer"
           >
             <FolderLock className="w-4 h-4 text-amber-400" />
             <span>Document Verification</span>
           </Link>
+          {isAdmin && (
+            <Link
+              to="/users"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs backdrop-blur-sm border border-white/10 transition-colors cursor-pointer"
+            >
+              <UserCog className="w-4 h-4 text-amber-400" />
+              <span>User Management</span>
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
+      {/* KPI Cards Grid (All Fully Clickable) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           title="Active Filings"
@@ -113,6 +123,7 @@ export const Dashboard: React.FC = () => {
           subtitle="Tax & GST Applications"
           icon={FileText}
           color="amber"
+          to="/applications"
         />
         <StatCard
           title="Client Accounts"
@@ -120,6 +131,7 @@ export const Dashboard: React.FC = () => {
           subtitle="Businesses & Individuals"
           icon={Users}
           color="blue"
+          to="/clients"
         />
         <StatCard
           title="Pending Documents"
@@ -127,6 +139,7 @@ export const Dashboard: React.FC = () => {
           subtitle="Awaiting Verification"
           icon={FolderLock}
           color="rose"
+          to="/documents"
         />
         <StatCard
           title="Settled Revenue"
@@ -134,10 +147,11 @@ export const Dashboard: React.FC = () => {
           subtitle="Total Verified Payments"
           icon={CreditCard}
           color="emerald"
+          to="/payments"
         />
       </div>
 
-      {/* Main Grid: Recent Applications + Leads Widget */}
+      {/* Main Grid: Recent Applications + Leads Widget & User Management */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Applications Ledger (2 Columns) */}
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -180,31 +194,34 @@ export const Dashboard: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  applications.map((app) => (
-                    <tr key={app.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                        {app.applicationNumber}
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-800">
-                        {app.clientName || 'Direct Client'}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600 truncate max-w-[150px]">
-                        {app.serviceName || app.title}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <StatusBadge status={app.status} />
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <Link
-                          to={`/applications/${app.publicId}`}
-                          className="font-bold text-amber-600 hover:text-amber-700 inline-flex items-center gap-1"
-                        >
-                          <span>Review</span>
-                          <ArrowUpRight className="w-3 h-3" />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))
+                  applications.map((app) => {
+                    const appPubId = app.publicId || (app as any).public_id || String(app.id);
+                    return (
+                      <tr key={app.id || appPubId} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                          {app.applicationNumber}
+                        </td>
+                        <td className="py-3.5 px-4 font-medium text-slate-800">
+                          {app.clientName || 'Direct Client'}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600 truncate max-w-[150px]">
+                          {app.serviceName || app.title}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <StatusBadge status={app.status} />
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <Link
+                            to={`/applications/${appPubId}`}
+                            className="font-bold text-amber-600 hover:text-amber-700 inline-flex items-center gap-1"
+                          >
+                            <span>Review</span>
+                            <ArrowUpRight className="w-3 h-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -213,6 +230,27 @@ export const Dashboard: React.FC = () => {
 
         {/* CRM Leads & Quick Actions (1 Column) */}
         <div className="space-y-6">
+          {/* User Management & Governance Quick Card (Clickable) */}
+          <Link
+            to="/users"
+            className="block p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-[#0c1833] text-white border border-slate-800 hover:border-amber-500/50 shadow-md transition-all group cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 group-hover:bg-amber-500 group-hover:text-slate-950 transition-colors">
+                  <UserCog className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white tracking-tight group-hover:text-amber-400 transition-colors">
+                    User Management
+                  </h4>
+                  <p className="text-xs text-slate-400 mt-0.5">Staff roles, permissions & governance</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+            </div>
+          </Link>
+
           {/* New Leads / Inquiries */}
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Building2, Lock, Mail, ArrowRight, ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -184,6 +184,15 @@ export const Login: React.FC = () => {
                   <span>•</span> {passwordError}
                 </p>
               )}
+            </div>
+
+            <div className="flex items-center justify-end pt-0.5">
+              <Link
+                to="/forgot-password"
+                className="text-[11px] font-bold text-amber-700 hover:text-amber-800 transition-colors"
+              >
+                Forgot your password?
+              </Link>
             </div>
 
             <div className="pt-2">

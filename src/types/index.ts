@@ -183,6 +183,9 @@ export interface Payment {
   paymentGateway: string;
   paymentMethod?: string;
   gatewayTransactionId?: string;
+  gatewayPaymentId?: string;
+  gatewayOrderId?: string;
+  failureReason?: string;
   paidAt?: string;
   createdAt: string;
 }
