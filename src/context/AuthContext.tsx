@@ -11,6 +11,7 @@ interface AuthContextType {
   hasRole: (...roles: RoleName[]) => boolean;
   hasPermission: (permission: string) => boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isConsultant: boolean;
 }
 
@@ -85,6 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return user.permissions.includes(permission);
   };
 
+  const isSuperAdmin = Boolean(user && user.roles.includes('SUPER_ADMIN'));
   const isAdmin = Boolean(user && (user.roles.includes('SUPER_ADMIN') || user.roles.includes('ADMIN')));
   const isConsultant = Boolean(user && user.roles.includes('CONSULTANT'));
 
@@ -99,6 +101,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         hasRole,
         hasPermission,
         isAdmin,
+        isSuperAdmin,
         isConsultant,
       }}
     >

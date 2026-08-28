@@ -22,6 +22,14 @@ import { AuditLogs } from './pages/audit/AuditLogs';
 import { Settings } from './pages/settings/Settings';
 import { NotFound } from './pages/NotFound';
 
+// Super Admin Management Suite Pages
+import { SuperAdminDashboard } from './pages/super-admin/SuperAdminDashboard';
+import { CategoriesManagement } from './pages/super-admin/CategoriesManagement';
+import { ServicesManagement } from './pages/super-admin/ServicesManagement';
+import { PricingManagement } from './pages/super-admin/PricingManagement';
+import { WebsiteContentManagement } from './pages/super-admin/WebsiteContentManagement';
+import { UserRoleManagement } from './pages/super-admin/UserRoleManagement';
+
 export const App: React.FC = () => {
   return (
     <BrowserRouter>
@@ -41,6 +49,7 @@ export const App: React.FC = () => {
                 </ProtectedRoute>
               }
             >
+              {/* Operations Workspace (Accountants & Operations Admins) */}
               <Route index element={<Dashboard />} />
               <Route path="applications" element={<ApplicationsList />} />
               <Route path="applications/:id" element={<ApplicationDetail />} />
@@ -51,7 +60,73 @@ export const App: React.FC = () => {
               <Route path="appointments" element={<AppointmentsList />} />
               <Route path="payments" element={<PaymentsList />} />
 
-              {/* Admin Only Governance Routes */}
+              {/* Super Admin Business Suite (Exclusive to SUPER_ADMIN) */}
+              <Route
+                path="super-admin"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <SuperAdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="super-admin/categories"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <CategoriesManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="super-admin/services"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <ServicesManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="super-admin/pricing"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <PricingManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="super-admin/website-content"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <WebsiteContentManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="super-admin/users"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <UserRoleManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="super-admin/audit-logs"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <AuditLogs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="super-admin/settings"
+                element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Admin General Governance Routes */}
               <Route
                 path="users"
                 element={

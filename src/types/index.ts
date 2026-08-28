@@ -177,6 +177,9 @@ export interface Payment {
   clientName?: string;
   applicationId?: number;
   applicationNumber?: string;
+  applicationTitle?: string;
+  clientEmail?: string;
+  clientPhone?: string;
   amount: string;
   currency: string;
   status: PaymentStatus;
@@ -225,4 +228,79 @@ export interface ApiResponse<T> {
     requestId?: string;
     details?: any[];
   };
+}
+
+export interface ServiceCategory {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  display_order: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AdminService {
+  id: number;
+  category_id: number;
+  name: string;
+  slug: string;
+  icon?: string | null;
+  short_description: string | null;
+  description: string | null;
+  features?: any;
+  eligibility?: string | null;
+  documents_required_description?: string | null;
+  processing_time?: string | null;
+  base_price: string | number | null;
+  discount_price?: string | number | null;
+  currency: string;
+  is_active: boolean;
+  is_featured?: boolean;
+  display_order: number;
+  category_name?: string;
+  category_slug?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PriceHistoryEntry {
+  id: number;
+  service_id: number;
+  previous_base_price: string | null;
+  new_base_price: string;
+  previous_discount_price: string | null;
+  new_discount_price: string | null;
+  currency: string;
+  changed_by: number | null;
+  reason: string | null;
+  created_at: string;
+  changed_by_name?: string | null;
+}
+
+export interface WebsiteContentItem {
+  id: number;
+  section_key: string;
+  content_key: string;
+  content_value: string | null;
+  content_type: 'TEXT' | 'HTML' | 'JSON' | 'IMAGE_URL' | 'BOOLEAN';
+  display_order: number;
+  is_published: boolean;
+  updated_by?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SuperAdminSummary {
+  totalUsers: number;
+  totalClients: number;
+  totalApplications: number;
+  totalServices: number;
+  activeServices: number;
+  totalCategories: number;
+  activeCategories: number;
+  recentPriceChanges: Array<PriceHistoryEntry & { service_name?: string }>;
+  recentLogs: AuditLog[];
 }
