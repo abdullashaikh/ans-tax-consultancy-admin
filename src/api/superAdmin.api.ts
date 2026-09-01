@@ -8,6 +8,8 @@ import {
   SuperAdminSummary,
   User,
   RoleName,
+  RegionType,
+  CategoryRegionType,
 } from '../types';
 
 export const superAdminApi = {
@@ -22,9 +24,9 @@ export const superAdminApi = {
   // ==========================================================================
   // CATEGORIES MANAGEMENT
   // ==========================================================================
-  async getCategories(all: boolean = true): Promise<ApiResponse<ServiceCategory[]>> {
+  async getCategories(all: boolean = true, region?: string): Promise<ApiResponse<ServiceCategory[]>> {
     const response = await apiClient.get<ApiResponse<ServiceCategory[]>>('/services/categories', {
-      params: { all: all ? 'true' : 'false' },
+      params: { all: all ? 'true' : 'false', region },
     });
     return response.data;
   },
@@ -32,6 +34,7 @@ export const superAdminApi = {
   async createCategory(data: {
     name: string;
     slug: string;
+    region?: CategoryRegionType;
     description?: string;
     icon?: string;
     displayOrder?: number;
@@ -46,6 +49,7 @@ export const superAdminApi = {
     data: {
       name?: string;
       slug?: string;
+      region?: CategoryRegionType;
       description?: string;
       icon?: string;
       displayOrder?: number;
@@ -71,9 +75,27 @@ export const superAdminApi = {
   // ==========================================================================
   // SERVICES & PRICING MANAGEMENT
   // ==========================================================================
-  async getServices(categoryId?: number, all: boolean = true): Promise<ApiResponse<AdminService[]>> {
+  async getServices(params?: {
+    categoryId?: number;
+    categorySlug?: string;
+    region?: string;
+    search?: string;
+    featured?: boolean;
+    all?: boolean;
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<AdminService[]>> {
     const response = await apiClient.get<ApiResponse<AdminService[]>>('/services', {
-      params: { categoryId, all: all ? 'true' : 'false' },
+      params: {
+        categoryId: params?.categoryId,
+        categorySlug: params?.categorySlug,
+        region: params?.region,
+        search: params?.search,
+        featured: params?.featured,
+        all: params?.all !== false ? 'true' : 'false',
+        page: params?.page,
+        limit: params?.limit,
+      },
     });
     return response.data;
   },
@@ -87,16 +109,33 @@ export const superAdminApi = {
     categoryId: number;
     name: string;
     slug: string;
+    region?: RegionType;
     icon?: string;
     shortDescription?: string;
     description?: string;
     features?: any;
+    overview?: string;
     eligibility?: string;
     documentsRequiredDescription?: string;
+    requiredDocuments?: any;
+    deliverables?: any;
+    processSteps?: any;
     processingTime?: string;
+    turnaround?: string;
     basePrice?: number;
     discountPrice?: number;
+    promoPrice?: number;
+    pricingNotes?: string;
+    exclusions?: any;
+    relatedServiceIds?: number[];
+    seoTitle?: string;
+    metaDescription?: string;
+    h1Heading?: string;
+    primaryCtaText?: string;
+    primaryCtaLink?: string;
     currency?: string;
+    billingPeriod?: string;
+    pricingMode?: string;
     isActive?: boolean;
     isFeatured?: boolean;
     displayOrder?: number;
@@ -111,16 +150,33 @@ export const superAdminApi = {
       categoryId?: number;
       name?: string;
       slug?: string;
+      region?: RegionType;
       icon?: string;
       shortDescription?: string;
       description?: string;
       features?: any;
+      overview?: string;
       eligibility?: string;
       documentsRequiredDescription?: string;
+      requiredDocuments?: any;
+      deliverables?: any;
+      processSteps?: any;
       processingTime?: string;
+      turnaround?: string;
       basePrice?: number;
       discountPrice?: number;
+      promoPrice?: number;
+      pricingNotes?: string;
+      exclusions?: any;
+      relatedServiceIds?: number[];
+      seoTitle?: string;
+      metaDescription?: string;
+      h1Heading?: string;
+      primaryCtaText?: string;
+      primaryCtaLink?: string;
       currency?: string;
+      billingPeriod?: string;
+      pricingMode?: string;
       isActive?: boolean;
       isFeatured?: boolean;
       displayOrder?: number;
@@ -142,6 +198,7 @@ export const superAdminApi = {
     data: {
       basePrice: number;
       discountPrice?: number | null;
+      promoPrice?: number | null;
       currency?: string;
       reason?: string;
     }

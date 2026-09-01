@@ -230,33 +230,56 @@ export interface ApiResponse<T> {
   };
 }
 
+export type RegionType = 'INDIA' | 'UAE';
+export type CategoryRegionType = 'INDIA' | 'UAE' | 'GLOBAL';
+
 export interface ServiceCategory {
   id: number;
   name: string;
   slug: string;
+  region?: CategoryRegionType;
   description: string | null;
   icon: string | null;
   display_order: number;
   is_active: boolean;
+  service_count?: number;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface AdminService {
   id: number;
+  som_number?: number | null;
   category_id: number;
   name: string;
   slug: string;
+  region?: RegionType;
   icon?: string | null;
   short_description: string | null;
   description: string | null;
   features?: any;
+  overview?: string | null;
   eligibility?: string | null;
   documents_required_description?: string | null;
+  required_documents?: string[] | any;
+  deliverables?: string[] | any;
+  process_steps?: Array<{ step?: number; title: string; description: string }> | any;
   processing_time?: string | null;
+  turnaround?: string | null;
   base_price: string | number | null;
   discount_price?: string | number | null;
+  promo_price?: string | number | null;
+  pricing_notes?: string | null;
+  exclusions?: string[] | any;
+  related_service_ids?: number[] | any;
+  seo_title?: string | null;
+  meta_description?: string | null;
+  h1_heading?: string | null;
+  primary_cta_text?: string | null;
+  primary_cta_link?: string | null;
   currency: string;
+  billing_period?: string;
+  pricing_mode?: string;
   is_active: boolean;
   is_featured?: boolean;
   display_order: number;

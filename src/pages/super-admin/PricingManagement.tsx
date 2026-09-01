@@ -18,11 +18,13 @@ export const PricingManagement: React.FC = () => {
   const [services, setServices] = useState<AdminService[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [search, setSearch] = useState<string>('');
+  const [selectedRegion, setSelectedRegion] = useState<string>('ALL');
 
   // Price Edit Modal
   const [selectedService, setSelectedService] = useState<AdminService | null>(null);
   const [basePrice, setBasePrice] = useState<string>('');
   const [discountPrice, setDiscountPrice] = useState<string>('');
+  const [currency, setCurrency] = useState<string>('INR');
   const [reason, setReason] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
 
@@ -36,7 +38,7 @@ export const PricingManagement: React.FC = () => {
   const loadServices = async () => {
     try {
       setLoading(true);
-      const res = await superAdminApi.getServices(undefined, true);
+      const res = await superAdminApi.getServices({ all: true });
       if (res.success && res.data) {
         setServices(res.data);
       }
@@ -54,7 +56,10 @@ export const PricingManagement: React.FC = () => {
   const openUpdateModal = (service: AdminService) => {
     setSelectedService(service);
     setBasePrice(service.base_price ? String(service.base_price) : '0');
-    setDiscountPrice(service.discount_price ? String(service.discount_price) : '');
+    setDiscountPrice(
+      service.promo_price ? String(service.promo_price) : service.discount_price ? String(service.discount_price) : ''
+    );
+    setCurrency(service.currency || (service.region === 'UAE' ? 'AED' : 'INR'));
     setReason('');
   };
 
@@ -79,6 +84,8 @@ export const PricingManagement: React.FC = () => {
       await superAdminApi.updatePricing(selectedService.id, {
         basePrice: numBase,
         discountPrice: numDiscount,
+        promoPrice: numDiscount,
+        currency,
         reason: reason.trim() || 'Super Admin pricing update',
       });
       showSuccess(`Pricing updated for ${selectedService.name}`);
@@ -106,12 +113,14 @@ export const PricingManagement: React.FC = () => {
     }
   };
 
-  const filteredServices = services.filter(
-    (s) =>
+  const filteredServices = services.filter((s) => {
+    const matchRegion = selectedRegion === 'ALL' || (s.region || 'INDIA') === selectedRegion;
+    const matchSearch =
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.slug.toLowerCase().includes(search.toLowerCase()) ||
-      (s.category_name && s.category_name.toLowerCase().includes(search.toLowerCase()))
-  );
+      (s.category_name && s.category_name.toLowerCase().includes(search.toLowerCase()));
+    return matchRegion && matchSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -127,7 +136,7 @@ export const PricingManagement: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Authoritative source of truth for service pricing. All changes require an audit justification and are logged immutably.
+            Authoritative source of truth for service pricing across India (INR) and UAE (AED). All changes require an audit justification and are logged immutably.
           </p>
         </div>
 
@@ -153,8 +162,28 @@ export const PricingManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm">
+      {/* Region Switcher & Search Bar */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {[
+            { key: 'ALL', label: 'All Jurisdictions' },
+            { key: 'INDIA', label: '🇮🇳 India (INR)' },
+            { key: 'UAE', label: '🇦🇪 UAE (AED)' },
+          ].map((reg) => (
+            <button
+              key={reg.key}
+              onClick={() => setSelectedRegion(reg.key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                selectedRegion === reg.key
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {reg.label}
+            </button>
+          ))}
+        </div>
+
         <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
@@ -170,78 +199,98 @@ export const PricingManagement: React.FC = () => {
       {/* Pricing Table */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-xs text-slate-400">Loading pricing catalogue...</div>
+          <div className="p-12 text-center text-xs text-slate-400">Loading pricing records...</div>
         ) : filteredServices.length === 0 ? (
-          <div className="p-12 text-center text-xs text-slate-400">No services found matching search.</div>
+          <div className="p-12 text-center text-xs text-slate-400">No services found matching filters.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-500 uppercase tracking-wider font-semibold">
-                <tr>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                   <th className="py-3 px-4">Service</th>
+                  <th className="py-3 px-4">Region</th>
                   <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Current Base Price</th>
-                  <th className="py-3 px-4">Promo / Discount</th>
+                  <th className="py-3 px-4">Base Fee</th>
+                  <th className="py-3 px-4">Promotional Fee</th>
                   <th className="py-3 px-4">Effective Price</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
                 {filteredServices.map((service) => {
                   const base = Number(service.base_price || 0);
-                  const discount = service.discount_price ? Number(service.discount_price) : null;
-                  const effective = discount !== null ? discount : base;
-                  const savings = discount !== null && base > 0 ? Math.round(((base - discount) / base) * 100) : 0;
+                  const promo =
+                    service.promo_price !== undefined && service.promo_price !== null
+                      ? Number(service.promo_price)
+                      : service.discount_price !== undefined && service.discount_price !== null
+                      ? Number(service.discount_price)
+                      : null;
+                  const effective = promo !== null ? promo : base;
+                  const curr = service.currency || (service.region === 'UAE' ? 'AED' : 'INR');
 
                   return (
-                    <tr key={service.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                    <tr key={service.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-4 font-semibold text-slate-900">
                         <div>{service.name}</div>
-                        <div className="font-mono text-[10px] text-slate-400 mt-0.5">
-                          {service.slug}
+                        <div className="text-[11px] text-slate-400 font-mono mt-0.5">
+                          /{service.region?.toLowerCase() || 'india'}/{service.slug}
                         </div>
                       </td>
+
                       <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px]">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                            (service.region || 'INDIA') === 'UAE'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
+                              : 'bg-indigo-50 text-indigo-700 border border-indigo-200/60'
+                          }`}
+                        >
+                          {(service.region || 'INDIA') === 'UAE' ? '🇦🇪 UAE' : '🇮🇳 India'}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium text-[11px]">
                           <Layers className="w-3 h-3 text-slate-400" />
                           <span>{service.category_name || 'General'}</span>
                         </span>
                       </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
-                        ₹{base.toLocaleString('en-IN')}
+
+                      <td className="py-3.5 px-4 font-medium text-slate-800">
+                        {curr} {base.toLocaleString()}
                       </td>
+
                       <td className="py-3.5 px-4">
-                        {discount !== null ? (
-                          <div className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[11px] font-semibold border border-emerald-200/50">
+                        {promo !== null ? (
+                          <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-semibold text-[11px]">
                             <TrendingDown className="w-3 h-3" />
-                            <span>₹{discount.toLocaleString('en-IN')}</span>
-                            {savings > 0 && <span className="text-[10px]">({savings}% off)</span>}
+                            <span>{curr} {promo.toLocaleString()}</span>
                           </div>
                         ) : (
-                          <span className="text-slate-400 font-mono text-[11px]">—</span>
+                          <span className="text-slate-400 text-[11px]">—</span>
                         )}
                       </td>
-                      <td className="py-3.5 px-4">
-                        <span className="font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200/60 font-mono text-xs">
-                          ₹{effective.toLocaleString('en-IN')}
-                        </span>
+
+                      <td className="py-3.5 px-4 font-bold text-purple-700">
+                        {curr} {effective.toLocaleString()}
                       </td>
+
                       <td className="py-3.5 px-4 text-right">
-                        <div className="inline-flex items-center gap-2">
+                        <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => openHistoryDrawer(service)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:text-purple-600 hover:bg-purple-50 transition-colors text-[11px] font-semibold"
-                            title="View Audit History"
+                            className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 text-[11px] font-semibold flex items-center gap-1"
+                            title="View Immutable Price History"
                           >
-                            <History className="w-3.5 h-3.5 text-slate-400" />
+                            <History className="w-3.5 h-3.5 text-slate-500" />
                             <span>History</span>
                           </button>
                           <button
                             onClick={() => openUpdateModal(service)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white transition-colors text-[11px] font-semibold shadow-sm"
+                            className="px-3 py-1 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 text-[11px] font-semibold flex items-center gap-1"
                           >
-                            <Tags className="w-3.5 h-3.5" />
-                            <span>Change Price</span>
+                            <span>Edit Fee</span>
+                            <ArrowRight className="w-3 h-3" />
                           </button>
                         </div>
                       </td>
@@ -256,77 +305,99 @@ export const PricingManagement: React.FC = () => {
 
       {/* Edit Price Modal */}
       {selectedService && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-            <h2 className="text-lg font-bold text-slate-900 mb-1">
-              Update Authoritative Price
-            </h2>
-            <p className="text-xs text-slate-500 mb-5">
-              Service: <span className="font-bold text-slate-800">{selectedService.name}</span>
-            </p>
-
-            <form onSubmit={handleUpdatePrice} className="space-y-4 text-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Base Price (INR) *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  required
-                  value={basePrice}
-                  onChange={(e) => setBasePrice(e.target.value)}
-                  className="w-full px-3.5 py-2 font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                />
+                <h2 className="text-base font-bold text-slate-900">Update Service Fee</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{selectedService.name}</p>
+              </div>
+              <button
+                onClick={() => setSelectedService(null)}
+                className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdatePrice}>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Base Fee *
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      value={basePrice}
+                      onChange={(e) => setBasePrice(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Promotional Fee
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={discountPrice}
+                      onChange={(e) => setDiscountPrice(e.target.value)}
+                      placeholder="Optional"
+                      className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Currency
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  >
+                    <option value="INR">INR (₹) - Indian Rupee</option>
+                    <option value="AED">AED (د.إ) - UAE Dirham</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Audit Justification / Reason *
+                  </label>
+                  <textarea
+                    rows={2}
+                    required
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="e.g. Q3 Promotional Campaign or Statutory Tariff Adjustment"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Mandatory for regulatory and internal pricing audit tracking.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Discount / Promotional Price (INR)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="Leave blank for no promo discount"
-                  value={discountPrice}
-                  onChange={(e) => setDiscountPrice(e.target.value)}
-                  className="w-full px-3.5 py-2 font-mono bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  When set, public website displays strikethrough base price and this discounted fee.
-                </p>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Mandatory Audit Reason *
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  placeholder="e.g. Festive discount offer, Annual GST compliance revision, statutory adjustment"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setSelectedService(null)}
-                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUpdating}
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-sm transition-colors disabled:opacity-50"
+                  className="px-5 py-2 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-xl shadow-sm transition-colors disabled:opacity-50"
                 >
-                  {isUpdating ? 'Recording...' : 'Update & Audit Log'}
+                  {isUpdating ? 'Saving...' : 'Confirm & Commit Price'}
                 </button>
               </div>
             </form>
@@ -334,77 +405,75 @@ export const PricingManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Price History Drawer */}
+      {/* History Drawer */}
       {historyService && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex justify-end">
-          <div className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col p-6 border-l border-slate-200 overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white h-full w-full max-w-md shadow-2xl flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <History className="w-5 h-5 text-purple-600" />
-                  <span>Price Audit History</span>
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Service: <span className="font-semibold text-slate-800">{historyService.name}</span>
-                </p>
+                <h2 className="text-base font-bold text-slate-900">Pricing Audit Trail</h2>
+                <p className="text-xs text-slate-500 mt-0.5">{historyService.name}</p>
               </div>
               <button
                 onClick={() => setHistoryService(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex-1 py-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {loadingHistory ? (
-                <div className="p-8 text-center text-xs text-slate-400">Loading audit history...</div>
+                <div className="p-12 text-center text-xs text-slate-400">Loading audit history...</div>
               ) : historyLogs.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400">
-                  No previous price revisions recorded for this service.
+                <div className="p-12 text-center text-xs text-slate-400">
+                  No historical price change logs found for this service.
                 </div>
               ) : (
-                <div className="space-y-4 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                  {historyLogs.map((log) => (
-                    <div key={log.id} className="relative pl-8">
-                      <div className="w-6 h-6 rounded-full bg-purple-100 text-purple-600 border border-purple-300 flex items-center justify-center absolute left-0 top-0 text-[10px] font-bold">
-                        ₹
+                historyLogs.map((log) => (
+                  <div key={log.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span>{new Date(log.created_at).toLocaleString()}</span>
+                      <span className="font-semibold text-slate-600">
+                        {log.changed_by_name || 'System / Admin'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs">
+                      <div className="text-slate-500">
+                        Prev:{' '}
+                        <span className="font-medium text-slate-700">
+                          {log.previous_base_price ? `${log.currency} ${Number(log.previous_base_price).toLocaleString()}` : 'None'}
+                        </span>
                       </div>
-                      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-900">
-                            ₹{Number(log.new_base_price).toLocaleString('en-IN')}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            {new Date(log.created_at).toLocaleString()}
-                          </span>
-                        </div>
-                        {log.previous_base_price && (
-                          <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-                            <span>Previous: ₹{Number(log.previous_base_price).toLocaleString('en-IN')}</span>
-                            <ArrowRight className="w-3 h-3 text-slate-400" />
-                            <span className="font-semibold text-purple-700">₹{Number(log.new_base_price).toLocaleString('en-IN')}</span>
-                          </div>
-                        )}
-                        <p className="text-[11px] text-slate-600 mt-2 italic bg-white p-2 rounded-lg border border-slate-100">
-                          "{log.reason || 'Price adjustment'}"
-                        </p>
-                        <p className="text-[10px] text-slate-400 mt-2">
-                          Author: {log.changed_by_name || `Admin #${log.changed_by || 'SYS'}`}
-                        </p>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                      <div className="font-bold text-purple-700">
+                        New: {log.currency} {Number(log.new_base_price).toLocaleString()}
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    {log.new_discount_price && (
+                      <div className="text-[11px] text-emerald-600 font-medium">
+                        Promotional Fee: {log.currency} {Number(log.new_discount_price).toLocaleString()}
+                      </div>
+                    )}
+
+                    {log.reason && (
+                      <div className="text-[11px] text-slate-600 bg-white p-2 rounded-lg border border-slate-200/60 mt-1">
+                        <span className="font-semibold">Reason:</span> {log.reason}
+                      </div>
+                    )}
+                  </div>
+                ))
               )}
             </div>
 
-            <div className="pt-4 border-t border-slate-100 text-right">
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50">
               <button
                 onClick={() => setHistoryService(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                className="w-full py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50"
               >
-                Close Drawer
+                Close Audit Trail
               </button>
             </div>
           </div>
